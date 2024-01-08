@@ -12,14 +12,15 @@ public class DesktopSharing {
 
     public static void main(String[] args) {
         try {
-            ServerSocket serverSocket = new ServerSocket(PORT);
-            System.out.println("Desktop Sharing Server listening on port " + PORT);
+            try (ServerSocket serverSocket = new ServerSocket(PORT)) {
+                System.out.println("Desktop Sharing Server listening on port " + PORT);
 
-            while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Client connected: " + clientSocket.getInetAddress());
+                while (true) {
+                    Socket clientSocket = serverSocket.accept();
+                    System.out.println("Client connected: " + clientSocket.getInetAddress());
 
-                new Thread(new DesktopSharingHandler(clientSocket)).start();
+                    new Thread(new DesktopSharingHandler(clientSocket)).start();
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();

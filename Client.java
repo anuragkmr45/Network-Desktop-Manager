@@ -16,7 +16,7 @@ public class Client {
     private static final int DESKTOP_SHARING_PORT = 5000;
     private static final int LOCKING_PORT = 7000;
     private static final String SERVER_IP = "localhost";
-    private static final int SERVER_PORT = 12345;
+    private static final int SERVER_PORT = 2000;
 
     public static void main(String[] args) {
         while (true) {

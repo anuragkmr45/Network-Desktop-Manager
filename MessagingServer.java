@@ -4,14 +4,14 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Server {
+public class MessagingServer {
 
     private static Map<Socket, PrintWriter> clientWriters = new HashMap<>();
 
     public static void main(String[] args) {
         try {
-            try (ServerSocket serverSocket = new ServerSocket(12345)) {
-                System.out.println("Server is listening on port 12345...");
+            try (ServerSocket serverSocket = new ServerSocket(2000)) {
+                System.out.println("Server is listening on port 2000...");
 
                 while (true) {
                     Socket clientSocket = serverSocket.accept();
@@ -30,8 +30,7 @@ public class Server {
 
     private static void handleClient(Socket clientSocket) {
         try (
-            BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))
-        ) {
+                BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()))) {
             String clientMessage;
             while ((clientMessage = reader.readLine()) != null) {
                 System.out.println("Received from client: " + clientMessage);

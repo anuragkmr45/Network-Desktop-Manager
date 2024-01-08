@@ -8,14 +8,15 @@ public class DesktopLockingServer {
 
     public static void main(String[] args) {
         try {
-            ServerSocket serverSocket = new ServerSocket(LOCKING_PORT);
-            System.out.println("Desktop Locking Server listening on port " + LOCKING_PORT);
+            try (ServerSocket serverSocket = new ServerSocket(LOCKING_PORT)) {
+                System.out.println("Desktop Locking Server listening on port " + LOCKING_PORT);
 
-            while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("Client connected for locking/unlocking: " + clientSocket.getInetAddress());
+                while (true) {
+                    Socket clientSocket = serverSocket.accept();
+                    System.out.println("Client connected for locking/unlocking: " + clientSocket.getInetAddress());
 
-                new Thread(new DesktopLockingHandler(clientSocket)).start();
+                    new Thread(new DesktopLockingHandler(clientSocket)).start();
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -40,23 +41,29 @@ class DesktopLockingHandler implements Runnable {
             String command;
             while ((command = reader.readLine()) != null) {
                 if (command.equals("LOCK")) {
-                    isLocked.set(true);
+                    lockDesktop();
                     System.out.println("Desktop locked by client: " + clientSocket.getInetAddress());
                 } else if (command.equals("UNLOCK")) {
-                    isLocked.set(false);
+                    unlockDesktop();
                     System.out.println("Desktop unlocked by client: " + clientSocket.getInetAddress());
                 } else {
                     System.out.println("Unknown command from client: " + command);
                 }
 
-                writer.println("ACK"); // Send acknowledgment to the client
+                writer.println("ACK"); 
             }
 
-            // Client closed the connection
             System.out.println("Client disconnected: " + clientSocket.getInetAddress());
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
+    private void lockDesktop() {
+        isLocked.set(true);
+    }
+
+    private void unlockDesktop() {
+        isLocked.set(false);
+    }
 }
