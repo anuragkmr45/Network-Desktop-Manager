@@ -1,17 +1,21 @@
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Client {
-    private static final int PORT_SCANNING_PORT = 6000;
+    // private static final int PORT_SCANNING_PORT = 6000;
     private static final int DESKTOP_SHARING_PORT = 5000;
     private static final int LOCKING_PORT = 7000;
-    private static final String SERVER_IP = "localhost"; 
+    private static final String SERVER_IP = "localhost";
     private static final int SERVER_PORT = 12345;
 
     public static void main(String[] args) {
@@ -28,7 +32,7 @@ public class Client {
 
                 switch (choice) {
                     case 1:
-                        startPortScanning();
+                        startPortScanning("localhost", 1000, 10000);
                         break;
                     case 2:
                         startDesktopSharing();
@@ -51,26 +55,34 @@ public class Client {
         }
     }
 
-    private static void startPortScanning() {
-        try {
-            String targetIpAddress = JOptionPane.showInputDialog("Enter target IP address:");
-            String targetPortStr = JOptionPane.showInputDialog("Enter target port:");
+    public static List<Integer> startPortScanning(String targetIP, int startPort, int endPort) {
+        List<Integer> occupiedPorts = new ArrayList<>();
 
-            if (targetIpAddress == null || targetPortStr == null) {
-                return;
+        StringBuilder resultMessage = new StringBuilder("Scanning ports...\n");
+
+        for (int port = startPort; port <= endPort; port++) {
+            if (isPortOccupied(targetIP, port)) {
+                occupiedPorts.add(port);
+                resultMessage.append("Port ").append(port).append(" is occupied\n");
             }
+        }
 
-            int targetPort = Integer.parseInt(targetPortStr);
+        resultMessage.append("Port scanning completed.\n");
 
-            try (Socket socket = new Socket("localhost", PORT_SCANNING_PORT)) {
-                PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-                writer.println(targetIpAddress);
-                writer.println(targetPort);
+        // Display the information in a JOptionPane
+        JOptionPane.showMessageDialog(null, resultMessage.toString(), "Port Scanning Results",
+                JOptionPane.INFORMATION_MESSAGE);
 
-                // Handle the response from the server if needed
-            }
-        } catch (IOException | NumberFormatException e) {
-            e.printStackTrace();
+        return occupiedPorts;
+    }
+
+    private static boolean isPortOccupied(String ip, int port) {
+        try (Socket ignored = new Socket(ip, port)) {
+            // If the connection is successful, the port is occupied
+            return true;
+        } catch (Exception ignored) {
+            // If an exception occurs, the port is not occupied
+            return false;
         }
     }
 
@@ -87,7 +99,11 @@ public class Client {
                 ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 
                 while (true) {
-                    BufferedImage screenshot = (BufferedImage) ois.readObject();
+                    byte[] imageBytes = (byte[]) ois.readObject();
+                    ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes);
+                    BufferedImage screenshot = ImageIO.read(bais);
+                    bais.close();
+
                     ImageIcon icon = new ImageIcon(screenshot);
                     frame.getContentPane().removeAll();
                     frame.getContentPane().add(new JLabel(icon));
