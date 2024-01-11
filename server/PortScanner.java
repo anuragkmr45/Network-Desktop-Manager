@@ -4,7 +4,7 @@ import java.util.List;
 
 public class PortScanner {
     public static void main(String[] args) {
-        scanPorts("localhost", 1000, 8000);
+        scanPorts("localhost", 1000, 10000);
     }
 
     public static List<Integer> scanPorts(String targetIP, int startPort, int endPort) {

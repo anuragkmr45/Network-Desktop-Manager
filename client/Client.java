@@ -1,5 +1,6 @@
-import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.imageio.ImageIO;
+import java.awt.HeadlessException;
 import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
@@ -10,18 +11,22 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+// import java.io.ByteArrayInputStream;
+// import java.io.ObjectInputStream;
 
 public class Client {
     // private static final int PORT_SCANNING_PORT = 6000;
+    // private static final int LOCKING_PORT = 7000;
     private static final int DESKTOP_SHARING_PORT = 5000;
-    private static final int LOCKING_PORT = 7000;
+
+    // for port scanning 
     private static final String SERVER_IP = "localhost";
     private static final int SERVER_PORT = 2000;
 
     public static void main(String[] args) {
         while (true) {
             String input = JOptionPane.showInputDialog(
-                    "Select an option:\n1. Port Scanning\n2. Desktop Sharing\n3. Desktop Locking\n4. Server Messagin\n5. Exit");
+                    "Select an option:\n1. Port Scanning\n2. Desktop Sharing\n3. Desktop Shutdown\n4. Desktop Restart\n5. Client-Server Messaging \n6. Exit");
 
             if (input == null || input.isEmpty()) {
                 continue;
@@ -32,18 +37,21 @@ public class Client {
 
                 switch (choice) {
                     case 1:
-                        startPortScanning("localhost", 1000, 10000);
+                        startPortScanning("localhost", 100, 10000);
                         break;
                     case 2:
                         startDesktopSharing();
                         break;
                     case 3:
-                        startDesktopLocking();
+                        startDesktopShutdown();
                         break;
                     case 4:
-                        sendMessage();
+                        startDesktopRestart();
                         break;
                     case 5:
+                        sendMessage();
+                        break;
+                    case 6:
                         System.out.println("Exiting...");
                         System.exit(0);
                     default:
@@ -54,6 +62,7 @@ public class Client {
             }
         }
     }
+
 
     public static List<Integer> startPortScanning(String targetIP, int startPort, int endPort) {
         List<Integer> occupiedPorts = new ArrayList<>();
@@ -69,7 +78,6 @@ public class Client {
 
         resultMessage.append("Port scanning completed.\n");
 
-        // Display the information in a JOptionPane
         JOptionPane.showMessageDialog(null, resultMessage.toString(), "Port Scanning Results",
                 JOptionPane.INFORMATION_MESSAGE);
 
@@ -78,67 +86,83 @@ public class Client {
 
     private static boolean isPortOccupied(String ip, int port) {
         try (Socket ignored = new Socket(ip, port)) {
-            // If the connection is successful, the port is occupied
+            // connection is successful => port occupied
             return true;
         } catch (Exception ignored) {
-            // If an exception occurs, the port is not occupied
+            // exception occurs => port not occupied
             return false;
+        }
+    }
+    
+
+    private static void startDesktopRestart() {
+        try {
+            String os = System.getProperty("os.name").toLowerCase();
+
+            if (os.contains("win")) {
+                // window
+                Runtime.getRuntime().exec("shutdown.exe -r -t 0");
+
+            } else if (os.contains("nix") || os.contains("nux") || os.contains("mac")) {
+                // unix / linux 
+                Runtime.getRuntime().exec("sudo shutdown -r now");
+
+            } else {
+                System.out.println("Unsupported operating system for system restart.");
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
     private static void startDesktopSharing() {
         try {
             try (Socket socket = new Socket("localhost", DESKTOP_SHARING_PORT)) {
-                System.out.println("Connected to Desktop Sharing Server...");
-
-                JFrame frame = new JFrame();
-                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-                frame.setSize(800, 600);
-                frame.setVisible(true);
+                System.out.println("Connected to the server.");
 
                 ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
 
+                JFrame frame = new JFrame("Screen Sharing");
+                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+                JLabel label = new JLabel();
+                frame.getContentPane().add(label);
+
+                frame.setSize(800, 600);
+                frame.setVisible(true);
+
                 while (true) {
                     byte[] imageBytes = (byte[]) ois.readObject();
-                    ByteArrayInputStream bais = new ByteArrayInputStream(imageBytes);
-                    BufferedImage screenshot = ImageIO.read(bais);
-                    bais.close();
-
-                    ImageIcon icon = new ImageIcon(screenshot);
-                    frame.getContentPane().removeAll();
-                    frame.getContentPane().add(new JLabel(icon));
+                    BufferedImage image = ImageIO.read(new ByteArrayInputStream(imageBytes));
+                    ImageIcon icon = new ImageIcon(image);
+                    label.setIcon(icon);
                     frame.repaint();
                 }
+            } catch (HeadlessException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
             }
+
         } catch (IOException | ClassNotFoundException e) {
             e.printStackTrace();
         }
     }
 
-    private static void startDesktopLocking() {
-        try (Socket socket = new Socket("localhost", LOCKING_PORT)) {
-            System.out.println("Connected to Desktop Locking Server...");
+    private static void startDesktopShutdown() {
+        try {
+            String os = System.getProperty("os.name").toLowerCase();
 
-            String command = JOptionPane.showInputDialog("Enter command: LOCK or UNLOCK");
-
-            if (command != null) {
-                command = command.trim(); // Trim leading and trailing whitespaces
-
-                if (!command.isEmpty() && (command.equalsIgnoreCase("LOCK") || command.equalsIgnoreCase("UNLOCK"))) {
-                    PrintWriter writer = new PrintWriter(socket.getOutputStream(), true);
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-                    writer.println(command);
-
-                    // Wait for acknowledgment from the server
-                    String response = reader.readLine();
-                    System.out.println("Server response: " + response);
-                } else {
-                    JOptionPane.showMessageDialog(null, "Invalid command. Please enter LOCK or UNLOCK.");
-                }
+            if (os.contains("win")) {
+                // For Windows
+                Runtime.getRuntime().exec("shutdown.exe -s -t 0");
+            } else if (os.contains("nix") || os.contains("nux") || os.contains("mac")) {
+                // For Unix/Linux/Mac
+                Runtime.getRuntime().exec("sudo shutdown -h now");
             } else {
-                JOptionPane.showMessageDialog(null, "Invalid command. Please enter LOCK or UNLOCK.");
+                System.out.println("Unsupported operating system for system shutdown.");
             }
+
         } catch (IOException e) {
             e.printStackTrace();
         }

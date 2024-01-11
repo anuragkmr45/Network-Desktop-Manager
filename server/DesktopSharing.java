@@ -13,13 +13,13 @@ public class DesktopSharing {
     public static void main(String[] args) {
         try {
             try (ServerSocket serverSocket = new ServerSocket(PORT)) {
-                System.out.println("Desktop Sharing Server listening on port " + PORT);
+                System.out.println("Screen Sharing Server listening on port " + PORT);
 
                 while (true) {
                     Socket clientSocket = serverSocket.accept();
                     System.out.println("Client connected: " + clientSocket.getInetAddress());
 
-                    new Thread(new DesktopSharingHandler(clientSocket)).start();
+                    new Thread(new ScreenSharingHandler(clientSocket)).start();
                 }
             }
         } catch (IOException e) {
@@ -28,10 +28,10 @@ public class DesktopSharing {
     }
 }
 
-class DesktopSharingHandler implements Runnable {
+class ScreenSharingHandler implements Runnable {
     private Socket clientSocket;
 
-    public DesktopSharingHandler(Socket socket) {
+    public ScreenSharingHandler(Socket socket) {
         this.clientSocket = socket;
     }
 
@@ -39,9 +39,10 @@ class DesktopSharingHandler implements Runnable {
     public void run() {
         try {
             Robot robot = new Robot();
-            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 
             ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
+
+            Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
 
             while (true) {
                 BufferedImage screenshot = robot.createScreenCapture(new Rectangle(screenSize));
@@ -55,7 +56,7 @@ class DesktopSharingHandler implements Runnable {
 
                 oos.writeObject(imageBytes);
 
-                // Introduce a delay to control the speed of desktop sharing
+                // Introduce a delay to control the speed of screen sharing
                 Thread.sleep(100);
             }
         } catch (IOException | AWTException | InterruptedException e) {
